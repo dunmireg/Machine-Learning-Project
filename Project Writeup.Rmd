@@ -1,0 +1,60 @@
+---
+title: "Practical Machine Learning Project"
+author: "Glenn Dunmire"
+date: "Thursday, August 21, 2014"
+output: html_document
+---
+
+##Background
+
+There are now numerous devices that can be used to collect large amounts of data on personal activity, such as Jawbone Up. Generally, people quanitfy how much of something they do but often do not quantify how well they do it. In this project, I will use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants who were asked to perform barbell lifts correctly and incorrectly. 
+
+For more information see the Coursera Practical Machine Learning page and and the Human Activity Recognition page found http://groupware.les.inf.puc-rio.br/har.
+
+##Executive Summary
+
+TO BE FILLED IN
+
+##Loading the data
+
+Once navigated into the appropriate directory I will download the two files from the course website into the appropriate directory. 
+
+I will call the files "testing" and "training" respectively. Note I am downloading using URL "http" and NOT "https" because I am using a Windows machine
+
+```{r}
+if(!file.exists("training.csv")) {
+    download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv", "training.csv")
+}
+
+if(!file.exists("testing.csv")) {
+  download.file("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv", "testing.csv")
+}
+```
+
+The testing data will be used later for the submission portion of the assignment.
+
+Now I'll read the training data into R and take a look at it.
+
+##Examining and Cleaning Data
+
+```{r}
+training <- read.csv("training.csv", na.strings = c("NA", ""))
+```
+
+So I've got 19,622 observations on 160 variables. That seems like an awful lot. 
+
+table(colSums(is.na(training)))
+cleanTrain <- training[!colSums(is.na(training)) >= 19216]
+cleanTrain <- cleanTrain[,8:60]
+
+//see about subsetting new_window = yes
+
+##Exploratory Analysis
+
+##Building the Model
+crossVal <- createDataPartition(y = cleanTrain$classe, p = 0.60, list = FALSE)
+train <- cleanTrain[crossVal,]
+test <- cleanTrain[-crossVal,]
+modFit <- randomForest(classe ~ ., data = train)
+pred <- predict(modFit, test)
+confusionMatrix(pred, test$classe)
