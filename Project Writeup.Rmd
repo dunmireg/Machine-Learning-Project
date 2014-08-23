@@ -37,24 +37,53 @@ Now I'll read the training data into R and take a look at it.
 
 ##Examining and Cleaning Data
 
+Examining the document in Excel I noticed a lot of columns are just NA or blank, so I'll tell R to treat "NA" and "" as NAs. 
+
 ```{r}
 training <- read.csv("training.csv", na.strings = c("NA", ""))
 ```
 
 So I've got 19,622 observations on 160 variables. That seems like an awful lot. 
 
+```{r}
 table(colSums(is.na(training)))
+```
+
+I can see I've got 100 columns where the vast majority of strings are NA. I'm going to take those out in the following lines. I'm also going to remove the first 7 columns, as those data don't see relevant to predicting the classe variable (for example this includes a timestamp). Note: I chose to leave the new_window="yes" rows in the data set, although the testing set only has new_window="no". These rows are substanially different but I did not see enough information in the experiment design to make me feel comfortable removing them. 
+
+```{r}
 cleanTrain <- training[!colSums(is.na(training)) >= 19216]
 cleanTrain <- cleanTrain[,8:60]
+```
 
-//see about subsetting new_window = yes
 
 ##Exploratory Analysis
 
 ##Building the Model
+
+First off I'm going to make a partition, putting 60% of the data into a training set and 40% into a validation set (note: this is all coming from the original training.csv file so this test set is distinct from the testing.csv file).
+
+```{r}
 crossVal <- createDataPartition(y = cleanTrain$classe, p = 0.60, list = FALSE)
 train <- cleanTrain[crossVal,]
-test <- cleanTrain[-crossVal,]
+val <- cleanTrain[-crossVal,]
+```
+
+Now I'm going to fit a randomForest model, using the randomForest() function from the randomForest package. I chose to use this instead of the method="rf" option in the train() function from caret because this function runs significantly faster and gives very good results. 
+
+```{r}
 modFit <- randomForest(classe ~ ., data = train)
-pred <- predict(modFit, test)
-confusionMatrix(pred, test$classe)
+modFit
+```
+
+Officially with random Forests there is no need for cross validation (see http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#ooberr) as the out of bag error is tested automatically. In my model, the OOB error is 0.63% which is very good (meaning accuracy of 99.37%)
+
+However, just to be safe I'm going to test my model on my validation set and see how that performs
+```{r}
+pred <- predict(modFit, val)
+confusionMatrix(pred, val$classe)
+```
+
+Fantastic! On the validation set I can see my model was 99.6% accurate, which is in line with what I would expect based on the OOB estimate obtained in the model. The result is also statistically signficant demonstrated by the low p-value. 
+
+Overall I believe this is a good model to estimate the classe variable from this data set. 
