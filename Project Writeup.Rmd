@@ -13,7 +13,16 @@ For more information see the Coursera Practical Machine Learning page and and th
 
 ##Executive Summary
 
-TO BE FILLED IN
+This data comes from http://groupware.les.inf.puc-rio.br/har and will be used to predict the classe variable. I will first clean the data, as there are many columns that are not useful ultimately winding up with 53 columns, meaning 52 variables used to predict classe. I will then fit a random forest model and report the expected out of sample error. 
+
+##Load packages for project
+
+This project depends on the following packages so I will load them now 
+
+```{r}
+library(caret)
+library(randomForest)
+```
 
 ##Loading the data
 
@@ -56,8 +65,7 @@ cleanTrain <- training[!colSums(is.na(training)) >= 19216]
 cleanTrain <- cleanTrain[,8:60]
 ```
 
-
-##Exploratory Analysis
+Now I am left with 52 variables to predict the classe variable, meaning a total of 53 columns. 
 
 ##Building the Model
 
@@ -74,16 +82,43 @@ Now I'm going to fit a randomForest model, using the randomForest() function fro
 ```{r}
 modFit <- randomForest(classe ~ ., data = train)
 modFit
+OOB <- modFit$err.rate[modFit$ntree, "OOB"]
 ```
 
-Officially with random Forests there is no need for cross validation (see http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#ooberr) as the out of bag error is tested automatically. In my model, the OOB error is 0.63% which is very good (meaning accuracy of 99.37%)
+Officially with random Forests there is no need for cross validation (see http://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#ooberr) as the out of bag error is tested automatically. In my model, the OOB error is `r OOB * 100`% which is very good (meaning accuracy of `r 100 - OOB*100`%)
 
 However, just to be safe I'm going to test my model on my validation set and see how that performs
+
 ```{r}
 pred <- predict(modFit, val)
-confusionMatrix(pred, val$classe)
+conMat <- confusionMatrix(pred, val$classe)
+conMat
 ```
 
-Fantastic! On the validation set I can see my model was 99.6% accurate, which is in line with what I would expect based on the OOB estimate obtained in the model. The result is also statistically signficant demonstrated by the low p-value. 
+Fantastic! On the validation set I can see my model was `r conMat$overall[[1]] * 100`%, which is in line with what I would expect based on the OOB estimate obtained in the model. The result is also statistically signficant demonstrated by the low p-value. 
 
 Overall I believe this is a good model to estimate the classe variable from this data set. 
+
+##Submission
+
+For the submission portion of the assignment I created a sub directory and used my model to fit all the test cases. I will not actually run the code here but it is shown for convenience:
+
+```{r, eval=FALSE}
+testing <- read.csv("testing.csv")
+pred <- predict(modFit, testing)
+pred <- as.character(pred)
+pml_write_files = function(x){
+    n = length(x)
+     for(i in 1:n){
+         filename = paste0("problem_id_",i,".txt")
+         write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+     }
+ }
+ pml_write_files(pred)
+```
+
+The output is a series of 20 text files with the following answers: 
+
+"B" "A" "B" "A" "A" "E" "D" "B" "A" "A" "B" "C" "B" "A" "E" "E" "A" "B" "B" "B"
+
+which are all marked as correct.
